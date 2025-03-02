@@ -1,5 +1,14 @@
 
 // include ./lib/note-duration.js
+
+// include ./lib/duration-factory.js
+
+/**
+ * Parameter name starting duration
+ * @type {string} 
+ */
+const DUR_START = 'Starting duration';
+
 /**
  * Parameter name for number of delay repeats
  * @type {string} 
@@ -50,6 +59,7 @@ var NeedsTimingInfo = true;
  */
 var notesOffSent = false;
 
+
 /** 
  * Handle incoming event
  * @param {Event} event MIDI event to process
@@ -60,11 +70,14 @@ function HandleMIDI(event) {
 
 	// Calculate the note duration in beats.  Begin execution of delayed notes.
 	if (event instanceof NoteOff) {
-		Trace(event.duration);
+        var noteDur = (GetParameter(DUR_START) > 0) ? 
+			durationFactory.convertDurationToBeat(durationFactory.getDuration(GetParameter(DUR_START))) :
+			event.duration;
+		Trace(noteDur);
 		noteRepeater(event.pitch,
 			event.velocity,
-			event.beatPos + event.duration,
-			(GetParameter('start length') > 0) ? event.duration : GetParameter('start length')
+			event.beatPos + noteDur,
+			noteDur
 		)
 	}
 	event.send();
@@ -118,8 +131,6 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
 		thisStartBeat = noteOffEvent.beatPos + Math.abs(thisDuration);
 		thisDuration += thisDuration * (GetParameter(DELAY_ACCEL_RATE) / 100);
 		thisVelocity += thisVelocity * (GetParameter(VELOCITY_ACCEL_RATE) / 100);
-		Trace('thisDuration: ' + thisDuration);
-		Trace('noteOnEvent.beatPos: ' + noteOnEvent.beatPos + ' | noteOffEvent.beatPos: ' + noteOffEvent.beatPos);
 
 
 		noteOnEvent.send();
@@ -151,16 +162,16 @@ function ProcessMIDI() {
 	}
 }
 
+
+durationFactory.durationList.unshift('off');
+
+/**
+ * List of parameter controls
+ * @type {Array} 
+ */
 var PluginParameters =
 	[
-		{
-			name: 'start length',
-			type: 'lin',
-			minValue: 4 * 1/64,
-			maxValue: 4 * 1/2,
-			numberOfSteps: 15,
-			defaultValue: 1
-		},
+		durationFactory.generateDurationMenu(DUR_START),
 		{
 			name: NUM_REPEATS,
 			type: 'lin',
@@ -190,3 +201,16 @@ var PluginParameters =
 
 	];
 
+	function ParameterChanged(param, value) {
+		// param is index in PluginParameters array
+		Trace(`"${PluginParameters[param].name}" changed to ${value}`);
+		if (PluginParameters[param].name == DUR_START) {
+			if (value == 0) {
+				Trace(DUR_START + ' is off');
+			} else  {
+				Trace(DUR_START + ':' + durationFactory.convertDurationToBeat(durationFactory.getDuration(GetParameter(DUR_START))));
+
+			}
+		}
+	}
+	

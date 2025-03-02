@@ -5,16 +5,9 @@
     "dependencies": {
         "bundle-js": "^1.0.3"
     },
-    "source": "./src/*.js",
-    "targets": {
-        "default": {
-            "distDir": "./dist"
-        }
-    },
     "scripts": {
         "clean": "rm ./dist/*.js",
-        "build": "for fn in ./src/*.js; do bundle-js \"$fn\" -o \"./dist/${fn##*/}\"; done",
-        "cp": "cp  ./dist/*.js ~/Music/Audio\\ Music\\ Apps/Plug-In\\ Settings/Scripter"
+        "build": "for fn in ./src/*.js; do bundle-js \"$fn\" -o \"./dist/${fn##*/}\"; done"
     },
     "name": "logic-audio-scripters",
     "version": "1.0.0",

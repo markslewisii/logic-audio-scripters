@@ -1,9 +1,11 @@
 # logic-audio-scripters
-Scripters for use in Logic Audio.  This repo contains common libraries in the /lib folder which are compiled into file .js files for use in the Logic Audio Scripter directory.  
+Scripters for use in Logic Audio.  This repo contains common functions in the `/lib` folder which are compiled into .js files for use in the Logic Audio Scripter directory.  
 
 # How to build
 
 ## install dependencies
+
+These are dependencies used for bundling the .js files.
 
 ```
 npm install
@@ -13,18 +15,44 @@ This will install Node modules to help build the Scripter scripts.
 
 ## Build the .js files
 
-This repo uses bundle-js to bundle Scripter .js files for use in Logic Audio.  These files will appear in the /dist directory.
+This repo uses bundle-js to bundle Scripter .js files for use in Logic Audio.  Bundle-js will bundle components into the individual files and place them in the `/dist` directory.
 
 ```
 npm run build
 ```
+Unfortunately you can't simply drop these files into a directory for Logic Audio to read.  You'll have to open the file in the `/dist` you want to import into Logic Audio, open the Scripter MIDI FX in Logic Audio, click the `Open Script in Editor` button, copy/paste the contents of the .js file into the editor, click the `Run Script` button, and choose `Save As...` from the Scripter window to save the file. The file should be saved as a `.pst` file in `~/Music/Audio Music Apps/Plug-In Settings/Scripter`.
 
-## Copy files to the Logic Audio Scripter directory
+# Scripts
+## Delay Accelerate and Decelerate.js
+This script is a note delay which will accelerate or decelerate and shorten or length the ndelayed notes respectively.  Note velocity can also increase or decrease. 
 
-The Scripter directory in Logic Audio should be `~/Music/Audio Music Apps/Plug-In Settings/Scripter`. To copy the files into this directory, run:
+### paramters
 
-```
-npm run cp
-```
+#### Number of delay repeats
+The number of delay notes to play.  The delay will stop if the note becomes to short or longer than eight 1/4 notes.
 
-If the Scripter directory is not correct for your system, edit the location in `package.json#scripts.cp`.
+#### Delay acceleration rate
+This is the percentage of the current delay note length to be set for the next delay note.
+
+* < 0 : Delay will accelerate
+* 0 : Delay rate will remain constant
+* \> 0: Delay will decelerate
+
+#### Velocity acceleration rate
+This is the percentage of the current delay note velocity to be set for the next delay note.
+
+* < 0 : Delay will get softer
+* 0 : Delay velocity will remain constant
+* \> 0: Delay will get louder
+
+# Dependencies
+
+Dependencies are in the `/lib` folder.  These are meant to be reused across scripts.
+
+## ./lib/duration-factory.js
+
+This library provides an object to perform note duration to Logic Audio beat values.  In logic Audio, 1/4 note = 1 beat.  The object also provides an array of note values you can use to generate a note value selector menu in a parameter.
+
+## ./lib/note-duration.js
+
+Ths library calculates a note duration by calculating the timing between Note On and Note Off of a given note.  A property `duration` will be added to the NoteOff event providing the length of the note that was just played.
