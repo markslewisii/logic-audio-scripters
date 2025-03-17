@@ -1,27 +1,43 @@
 /**
- * Array to temporarily store NoteOn events until the NoteOff event arrives.
- * @type {Array} 
- */
-var _noteHash = [];
-/**
  * Option to receiving timing info
  * @type {boolean} 
  */
 var NeedsTimingInfo = true;
-/**
- * Pass all MIDI events into this function.
- * The function will track NoteOn anf Note Offs to calculate a note duration and assign it to the NoteOFf event.
- * @param {NoteEvent} noteEvent 
- */
-function processNoteStream(noteEvent) {
-    if (noteEvent instanceof NoteOn) {
-        _noteHash[noteEvent.pitch] = noteEvent;
-    }
-    if (noteEvent instanceof NoteOff) {
-        if ((_noteHash[noteEvent.pitch] !== null) && (_noteHash[noteEvent.pitch] !== undefined)) {
-            noteEvent.duration = noteEvent.beatPos - _noteHash[noteEvent.pitch].beatPos;
+var noteDuration = {
+    /**
+     * Map to temporarily store NoteOn events until the NoteOff event arrives.
+     * @type {Map}
+     */
+    _noteMap: new Map(),
+    /**
+     * Pass all MIDI events into this function.
+     * The function will track NoteOn anf NoteOffs to calculate a note duration and assign it to the NoteOff event.
+     * @param {NoteEvent} midiEvent 
+     */
+    processNoteStream: function(midiEvent) {
+        if (midiEvent instanceof NoteOn) {
+            this._noteMap.set(midiEvent.pitch, midiEvent);
         }
-        _noteHash[noteEvent.pitch] = null;
+        if (midiEvent instanceof NoteOff) {
+            if ((this._noteMap.get(midiEvent.pitch) !== null) && (this._noteMap.get(midiEvent.pitch) !== undefined)) {
+                midiEvent.duration = midiEvent.beatPos - this._noteMap.get(midiEvent.pitch).beatPos;
+            }
+            this._noteMap.delete(midiEvent.pitch);
+        }
+    },
+    /**
+     * Get note Map of all current playing notes.
+     * @returns {Map}
+     */
+    getActiveNotes: function() {
+        return this._noteMap;
+    },
+    /**
+     * Clear the map of active notes.
+     * @returns {null}
+     */
+    clear: function() {
+        this._noteMap.clear();
     }
 }
 /**
@@ -51,7 +67,7 @@ var durationFactory = {
      * @returns {number}
      */
     convertDurationToBeat: function(durationStr) {
-        var parts = durationStr.split(' ');
+        var parts = String(durationStr).split(' ');
         var noteValue = eval(parts[0]);
         if (parts[1] == '.') {
             return this.dottedDurationToBeat(noteValue);
@@ -86,7 +102,21 @@ var durationFactory = {
      * @returns {number}
      */
     tripletDurationToBeat: function(value) {
-        return this.noteDurationToBeat(value) * (2 / 3);
+        return this.noteDurationToBeat(value) * (2.0 / 3.0);
+    },
+    /**
+     * Calculate the next beat after the provided beat that aligns with the quantize value
+     * @param {number} currentBeat The current beat
+     * @param {number} quantValue  The quantiaze value
+     * @returns 
+     */
+    nextBeatQuantized: function(currentBeat, quantValue) {
+        var quantBeat = Math.floor(currentBeat / quantValue) * quantValue;
+        if (quantBeat >= currentBeat) {
+            return currentBeat;
+        } else {
+            return quantBeat + quantValue;
+        }
     },
     /**
      * Provide an object to add to the PluginParameters array to generate a menu of note durations
@@ -133,13 +163,13 @@ const VELOCITY_ACCEL_RATE = 'Velocity acceleration rate';
  * Delay will not coninute if the note length less than this
  * @type {number} 
  */
-const MIN_DELAY = 1 / 240;
+const MIN_DELAY = 1.0 / 240.0;
 /**
  * Max length of a delay note in quarter notes.
  * Delay will not coninute if the note length exceeds this
  * @type {number} 
  */
-const MAX_DELAY = 8;
+const MAX_DELAY = 8.0;
 /**
  * Option to receiving timing info
  * @type {boolean} 
@@ -156,7 +186,7 @@ var notesOffSent = false;
  * @returns {null}
  */
 function HandleMIDI(event) {
-    processNoteStream(event);
+    noteDuration.processNoteStream(event);
     // Calculate the note duration in beats.  Begin execution of delayed notes.
     if (event instanceof NoteOff) {
         var noteDur = (GetParameter(DUR_START) > 0) ? durationFactory.convertDurationToBeat(durationFactory.getDuration(GetParameter(DUR_START))) : event.duration;
@@ -203,8 +233,8 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
         noteOffEvent.beatPos = thisStartBeat + thisDuration;
         // next iteration
         thisStartBeat = noteOffEvent.beatPos + Math.abs(thisDuration);
-        thisDuration += thisDuration * (GetParameter(DELAY_ACCEL_RATE) / 100);
-        thisVelocity += thisVelocity * (GetParameter(VELOCITY_ACCEL_RATE) / 100);
+        thisDuration += thisDuration * (GetParameter(DELAY_ACCEL_RATE) / 100.0);
+        thisVelocity += thisVelocity * (GetParameter(VELOCITY_ACCEL_RATE) / 100.0);
         noteOnEvent.send();
         noteOffEvent.send();
     }
@@ -220,7 +250,7 @@ function ProcessMIDI() {
     if (!info.playing && !notesOffSent) {
         Trace('ALL NOTES OFF!!!!');
         MIDI.allNotesOff();
-        noteHash = [];
+        noteDuration.clear();
         notesOffSent = true;
     }
     //reset the notesOffSent flag
@@ -247,7 +277,7 @@ var PluginParameters = [
         minValue: -50,
         maxValue: 50,
         numberOfSteps: 100,
-        defaultValue: 33,
+        defaultValue: 0,
         unit: '%'
     }, {
         name: VELOCITY_ACCEL_RATE,
@@ -255,7 +285,7 @@ var PluginParameters = [
         minValue: -50,
         maxValue: 50,
         numberOfSteps: 100,
-        defaultValue: 33,
+        defaultValue: 0,
         unit: '%'
     }
 ];

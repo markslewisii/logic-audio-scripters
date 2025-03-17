@@ -42,7 +42,7 @@ var durationFactory = {
      * @returns {number}
      */
     convertDurationToBeat: function(durationStr) {
-        var parts = durationStr.split(' ');
+        var parts = String(durationStr).split(' ');
         var noteValue = eval(parts[0]);
         if (parts[1] == '.') {
             return this.dottedDurationToBeat(noteValue);
@@ -80,7 +80,23 @@ var durationFactory = {
      * @returns {number}
      */
     tripletDurationToBeat: function (value) {
-        return this.noteDurationToBeat(value) * (2 / 3);
+        return this.noteDurationToBeat(value) * (2.0 / 3.0);
+    },
+
+    /**
+     * Calculate the next beat after the provided beat that aligns with the quantize value
+     * @param {number} currentBeat The current beat
+     * @param {number} quantValue  The quantiaze value
+     * @returns 
+     */
+    nextBeatQuantized: function(currentBeat, quantValue) {
+        var quantBeat = Math.floor(currentBeat / quantValue) * quantValue;
+
+        if (quantBeat >= currentBeat) {
+            return  currentBeat;
+        } else {
+            return quantBeat + quantValue;
+        }
     },
 
     /**

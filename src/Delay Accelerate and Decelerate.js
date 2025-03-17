@@ -38,14 +38,14 @@ const VELOCITY_ACCEL_RATE = 'Velocity acceleration rate';
  * Delay will not coninute if the note length less than this
  * @type {number} 
  */
-const MIN_DELAY = 1 / 240;
+const MIN_DELAY = 1.0 / 240.0;
 
 /**
  * Max length of a delay note in quarter notes.
  * Delay will not coninute if the note length exceeds this
  * @type {number} 
  */
-const MAX_DELAY = 8;
+const MAX_DELAY = 8.0;
 
 /**
  * Option to receiving timing info
@@ -66,7 +66,7 @@ var notesOffSent = false;
  * @returns {null}
  */
 function HandleMIDI(event) {
-	processNoteStream(event);
+	noteDuration.processNoteStream(event);
 
 	// Calculate the note duration in beats.  Begin execution of delayed notes.
 	if (event instanceof NoteOff) {
@@ -129,8 +129,8 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
 
 		// next iteration
 		thisStartBeat = noteOffEvent.beatPos + Math.abs(thisDuration);
-		thisDuration += thisDuration * (GetParameter(DELAY_ACCEL_RATE) / 100);
-		thisVelocity += thisVelocity * (GetParameter(VELOCITY_ACCEL_RATE) / 100);
+		thisDuration += thisDuration * (GetParameter(DELAY_ACCEL_RATE) / 100.0);
+		thisVelocity += thisVelocity * (GetParameter(VELOCITY_ACCEL_RATE) / 100.0);
 
 
 		noteOnEvent.send();
@@ -152,7 +152,7 @@ function ProcessMIDI() {
 	if (!info.playing && !notesOffSent) {
 		Trace('ALL NOTES OFF!!!!');
 		MIDI.allNotesOff();
-		noteHash = [];
+		noteDuration.clear();
 		notesOffSent = true;
 	}
 
@@ -186,7 +186,7 @@ var PluginParameters =
 			minValue: -50,
 			maxValue: 50,
 			numberOfSteps: 100,
-			defaultValue: 33,
+			defaultValue: 0,
 			unit: '%'
 		},
 		{
@@ -195,7 +195,7 @@ var PluginParameters =
 			minValue: -50,
 			maxValue: 50,
 			numberOfSteps: 100,
-			defaultValue: 33,
+			defaultValue: 0,
 			unit: '%'
 		}
 
