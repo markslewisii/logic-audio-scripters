@@ -21,7 +21,7 @@ var noteDuration = {
      * The function will track NoteOn anf NoteOffs to calculate a note duration and assign it to the NoteOff event.
      * @param {NoteEvent} midiEvent 
      */
-    processNoteStream: function(midiEvent) {
+    processNoteStream: function (midiEvent) {
         if (midiEvent instanceof NoteOn) {
             this._noteMap.set(midiEvent.pitch, midiEvent);
         }
@@ -37,16 +37,29 @@ var noteDuration = {
      * Get note Map of all current playing notes.
      * @returns {Map}
      */
-    getActiveNotes: function() {
+    getActiveNotes: function () {
         return this._noteMap;
+    },
+
+    /**
+     * 
+     * @param {number} intNote 
+     * @returns 
+     */
+    getActiveNote: function (intNote) {
+        if (this._noteMap.has(intNote)) {
+            return this._noteMap.get(intNote);
+        } else {
+            return null;
+        }
     },
 
     /**
      * Clear the map of active notes.
      * @returns {null}
      */
-    clear: function() {
+    clear: function () {
         this._noteMap.clear();
     }
-
+    
 }

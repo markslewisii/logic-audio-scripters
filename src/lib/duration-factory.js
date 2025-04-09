@@ -4,28 +4,14 @@
  * @type {Object}
  */
 var durationFactory = {
-
+    
     /**
      * List of note durations.  Used to generate a parameter menu.
      * T = triplet
      * . = dotted
      * @type {Array}
      */
-    durationList: [
-        "1/16 T",
-        "1/16",
-        "1/16 .",
-        "1/8 T",
-        "1/8",
-        "1/8 .",
-        "1/4 T",
-        "1/4",
-        "1/4 .",
-        "1/2 T",
-        "1/2",
-        "1/2 .",
-        "1"
-    ],
+    durationList: ["1/32 T", "1/32", "1/32 .", "1/16 T", "1/16", "1/16 .", "1/8 T", "1/8", "1/8 .", "1/4 T", "1/4", "1/4 .", "1/2 T", "1/2", "1/2 .", "1"],
 
     /**
      * Convert the index to value.
@@ -41,7 +27,7 @@ var durationFactory = {
      * @param {string} durationStr 
      * @returns {number}
      */
-    convertDurationToBeat: function(durationStr) {
+    convertDurationToBeat: function (durationStr) {
         var parts = String(durationStr).split(' ');
         var noteValue = eval(parts[0]);
         if (parts[1] == '.') {
@@ -60,7 +46,7 @@ var durationFactory = {
      * @returns {number}
      */
     noteDurationToBeat: function (value) {
-        return value * 4;
+        return value * 4.0;
     },
 
     /**
@@ -89,14 +75,8 @@ var durationFactory = {
      * @param {number} quantValue  The quantiaze value
      * @returns 
      */
-    nextBeatQuantized: function(currentBeat, quantValue) {
-        var quantBeat = Math.floor(currentBeat / quantValue) * quantValue;
-
-        if (quantBeat >= currentBeat) {
-            return  currentBeat;
-        } else {
-            return quantBeat + quantValue;
-        }
+    nextBeatQuantized: function (currentBeat, quantValue) {
+        return Math.ceil(currentBeat / quantValue) * quantValue;
     },
 
     /**
@@ -104,7 +84,7 @@ var durationFactory = {
      * @param {string} name 
      * @returns {object}
      */
-    generateDurationMenu: function(name) {
+    generateDurationMenu: function (name) {
         return {
             name: name,
             type: 'menu',
@@ -112,5 +92,4 @@ var durationFactory = {
             defaultValue: 0
         };
     }
-};
-
+}

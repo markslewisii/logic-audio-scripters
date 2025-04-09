@@ -3,6 +3,11 @@
  * @type {boolean} 
  */
 var NeedsTimingInfo = true;
+/**
+ * Object to track NoteOff - NoteOn events of the same pitch to add a duration property to NoteOff events.
+ * Send all incoming MIDI events to noteDuration.processNoteStream() in a HandleMIDI() method to track the events.
+ * @type {Object}
+ */
 var noteDuration = {
     /**
      * Map to temporarily store NoteOn events until the NoteOff event arrives.
@@ -33,6 +38,18 @@ var noteDuration = {
         return this._noteMap;
     },
     /**
+     * 
+     * @param {number} intNote 
+     * @returns 
+     */
+    getActiveNote: function(intNote) {
+        if (this._noteMap.has(intNote)) {
+            return this._noteMap.get(intNote);
+        } else {
+            return null;
+        }
+    },
+    /**
      * Clear the map of active notes.
      * @returns {null}
      */
@@ -52,7 +69,7 @@ var durationFactory = {
      * . = dotted
      * @type {Array}
      */
-    durationList: ["1/16 T", "1/16", "1/16 .", "1/8 T", "1/8", "1/8 .", "1/4 T", "1/4", "1/4 .", "1/2 T", "1/2", "1/2 .", "1"],
+    durationList: ["1/32 T", "1/32", "1/32 .", "1/16 T", "1/16", "1/16 .", "1/8 T", "1/8", "1/8 .", "1/4 T", "1/4", "1/4 .", "1/2 T", "1/2", "1/2 .", "1"],
     /**
      * Convert the index to value.
      * @param {number} index 
@@ -84,7 +101,7 @@ var durationFactory = {
      * @returns {number}
      */
     noteDurationToBeat: function(value) {
-        return value * 4;
+        return value * 4.0;
     },
     /**
      * Convert a dotted note duration to a beat.
@@ -111,12 +128,7 @@ var durationFactory = {
      * @returns 
      */
     nextBeatQuantized: function(currentBeat, quantValue) {
-        var quantBeat = Math.floor(currentBeat / quantValue) * quantValue;
-        if (quantBeat >= currentBeat) {
-            return currentBeat;
-        } else {
-            return quantBeat + quantValue;
-        }
+        return Math.ceil(currentBeat / quantValue) * quantValue;
     },
     /**
      * Provide an object to add to the PluginParameters array to generate a menu of note durations
@@ -131,7 +143,7 @@ var durationFactory = {
             defaultValue: 0
         };
     }
-};
+}
 /**
  * Parameter name starting duration
  * @type {string} 
@@ -186,12 +198,16 @@ var notesOffSent = false;
  * @returns {null}
  */
 function HandleMIDI(event) {
+    // Need a better way to do this, but get the NoteOn event if this is a NoteOff event so we can at least get the velocity
+    if (event instanceof NoteOff) {
+        var prevNoteOn = noteDuration.getActiveNote(event.pitch);
+    }
     noteDuration.processNoteStream(event);
     // Calculate the note duration in beats.  Begin execution of delayed notes.
     if (event instanceof NoteOff) {
         var noteDur = (GetParameter(DUR_START) > 0) ? durationFactory.convertDurationToBeat(durationFactory.getDuration(GetParameter(DUR_START))) : event.duration;
         Trace(noteDur);
-        noteRepeater(event.pitch, event.velocity, event.beatPos + noteDur, noteDur)
+        noteRepeater(event.pitch, prevNoteOn.velocity, event.beatPos + noteDur, noteDur)
     }
     event.send();
 }

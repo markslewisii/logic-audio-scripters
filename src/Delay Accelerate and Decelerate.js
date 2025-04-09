@@ -66,6 +66,11 @@ var notesOffSent = false;
  * @returns {null}
  */
 function HandleMIDI(event) {
+	// Need a better way to do this, but get the NoteOn event if this is a NoteOff event so we can at least get the velocity
+	if (event instanceof NoteOff) {
+		var prevNoteOn = noteDuration.getActiveNote(event.pitch);
+	}
+
 	noteDuration.processNoteStream(event);
 
 	// Calculate the note duration in beats.  Begin execution of delayed notes.
@@ -75,7 +80,7 @@ function HandleMIDI(event) {
 			event.duration;
 		Trace(noteDur);
 		noteRepeater(event.pitch,
-			event.velocity,
+			prevNoteOn.velocity,
 			event.beatPos + noteDur,
 			noteDur
 		)

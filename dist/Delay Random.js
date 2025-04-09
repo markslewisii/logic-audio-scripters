@@ -3,6 +3,11 @@
  * @type {boolean} 
  */
 var NeedsTimingInfo = true;
+/**
+ * Object to track NoteOff - NoteOn events of the same pitch to add a duration property to NoteOff events.
+ * Send all incoming MIDI events to noteDuration.processNoteStream() in a HandleMIDI() method to track the events.
+ * @type {Object}
+ */
 var noteDuration = {
     /**
      * Map to temporarily store NoteOn events until the NoteOff event arrives.
@@ -31,6 +36,18 @@ var noteDuration = {
      */
     getActiveNotes: function() {
         return this._noteMap;
+    },
+    /**
+     * 
+     * @param {number} intNote 
+     * @returns 
+     */
+    getActiveNote: function(intNote) {
+        if (this._noteMap.has(intNote)) {
+            return this._noteMap.get(intNote);
+        } else {
+            return null;
+        }
     },
     /**
      * Clear the map of active notes.

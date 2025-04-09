@@ -45,6 +45,22 @@ This is the percentage of the current delay note velocity to be set for the next
 * 0 : Delay velocity will remain constant
 * \> 0: Delay will get louder
 
+## Repeater.js
+This script will repeat the held notes at the pulse specified in the parameters.
+
+### parameters
+
+#### pulse duration
+Choose a note value for the repeater to repeat the note at.
+
+#### duration percentage
+
+This is how long each note that is repeated should be played at as a percentage of the chose pulse value.  The higher the percentage, the more legato.  The lower the percentage, the more staccato.
+
+#### mod wheel
+
+The mod wheel will increate the pulse.
+
 # Dependencies
 
 Dependencies are in the `/lib` folder.  These are meant to be reused across scripts.
