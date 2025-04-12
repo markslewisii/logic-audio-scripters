@@ -1,4 +1,11 @@
 /**
+ * Repeater
+ * MIDI effect for Logic Audio that will repeat the notes at the pulse set for the effect.
+ * @version 1.0
+ * @author Mark Lewis <mark.lewis@configuredbase.com>
+ * @see {@link https://github.com/markslewisii/logic-audio-scripters}
+ */
+/**
  * Static object to translate note durations to beat values.
  * In Logic Audio, a 1/4 note = 1 beat.
  * @type {Object}
@@ -211,7 +218,6 @@ function HandleMIDI(event) {
         switch (event.number) {
             case 1: // modulation
                 adjustPulseFromModulation(event.value);
-                Trace('modulation:' + event.value);
                 break;
             default:
                 //nothing
@@ -243,10 +249,15 @@ function ProcessMIDI() {
     var nextBeat = durationFactory.nextBeatQuantized(timingInfo.blockStartBeat, pulse);
     while ((timingInfo.blockStartBeat <= nextBeat) && (nextBeat < timingInfo.blockEndBeat)) {
         var thisBeatEnd = nextBeat + (pulse * (GetParameter(DURATION_PERC) / 100.0));
+        // Put the note off event that exceeds the loop end beat and schedule it from the loop start
+        if (timingInfo.cycling && (thisBeatEnd >= timingInfo.rightCycleBeat)) {
+            thisBeatEnd = timingInfo.leftCycleBeat + (timingInfo.rightCycleBeat - Math.floor(timingInfo.rightCycleBeat));
+        }
         noteDuration.getActiveNotes().forEach((activeNote) => {
             createNote(activeNote.pitch, activeNote.velocity, nextBeat, thisBeatEnd);
         });
-        nextBeat = durationFactory.nextBeatQuantized(nextBeat + 0.001, pulse);
+        pulse = getPulse();
+        nextBeat = durationFactory.nextBeatQuantized(nextBeat + pulse, pulse);
     }
     lastBlockStartBeat = timingInfo.blockStartBeat;
 }

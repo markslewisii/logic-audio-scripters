@@ -84,7 +84,6 @@ function HandleMIDI(event) {
         switch (event.number) {
             case 1: // modulation
                 adjustPulseFromModulation(event.value);
-                Trace('modulation:' + event.value);
                 break;
             default:
                 //nothing
@@ -122,10 +121,15 @@ function ProcessMIDI() {
 
     while ((timingInfo.blockStartBeat <= nextBeat) && (nextBeat < timingInfo.blockEndBeat)) {
         var thisBeatEnd = nextBeat + (pulse * (GetParameter(DURATION_PERC) / 100.0));
+        // Put the note off event that exceeds the loop end beat and schedule it from the loop start
+        if (timingInfo.cycling && (thisBeatEnd >= timingInfo.rightCycleBeat)) {
+            thisBeatEnd = timingInfo.leftCycleBeat + (timingInfo.rightCycleBeat - Math.floor(timingInfo.rightCycleBeat));
+        }
         noteDuration.getActiveNotes().forEach((activeNote) => {
             createNote(activeNote.pitch, activeNote.velocity, nextBeat, thisBeatEnd);
         });
-        nextBeat = durationFactory.nextBeatQuantized(nextBeat + 0.001, pulse);
+        pulse = getPulse();
+        nextBeat = durationFactory.nextBeatQuantized(nextBeat + pulse, pulse);
     }
 
     lastBlockStartBeat = timingInfo.blockStartBeat;
