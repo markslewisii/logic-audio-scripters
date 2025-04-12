@@ -1,7 +1,7 @@
 /**
  * Repeater
  * MIDI effect for Logic Audio that will repeat the notes at the pulse set for the effect.
- * @version 1.0
+ * @version 1.0.1
  * @author Mark Lewis <mark.lewis@configuredbase.com>
  * @see {@link https://github.com/markslewisii/logic-audio-scripters}
  */
