@@ -28,6 +28,21 @@ const DURATION_PERC = 'Duration percentage'
 var lastBlockStartBeat = 0.0;
 
 /**
+ * Quantize value for mod wheel
+ * @type {number}
+ */
+var modWheelValueQuant = 10.0;
+
+/**
+ * Shape of curve for mod wheel values.
+ * < 1 - quick change then slower
+ * 1 - linear
+ * > 1 - slow change then quickly
+ * @type {number}
+ */
+var modWheelValuePower = 0.9
+
+/**
  * Flag to determine if things need to be reset when the transport stops
  * @type {boolean}
  */
@@ -51,8 +66,18 @@ function getPulse() {
  * @param {number} modValue 
  */
 function adjustPulseFromModulation(modValue) {
-    if (modValue == 127.0) modValue = 126.0;
-    pulsePerc = (127.0 - modValue) / 127.0;
+    var numQuants = Math.floor(127.0 / modWheelValueQuant);
+    modValue = (modValue >= 126.0) ? 126.0 : modValue;
+    var newVal = Math.pow(Math.ceil(((127.0 - modValue) / 127.0) * numQuants) / numQuants, modWheelValuePower);
+    pulsePerc = (newVal > 1.0) ? 1.0 : newVal;
+}
+
+/**
+ * Get the length of a repeated note
+ * @returns {number}
+ */
+function getRepeatedNoteDuration() {
+    return getPulse() * (GetParameter(DURATION_PERC) / 100.0);
 }
 
 /**
@@ -86,9 +111,13 @@ function HandleMIDI(event) {
                 adjustPulseFromModulation(event.value);
                 break;
             default:
-                //nothing
+                // do nothing
                 break;
         }
+    }
+    if ((!(event instanceof NoteOn)) &&
+        (!(event instanceof NoteOff))) {
+        event.send();
     }
 }
 
@@ -120,7 +149,7 @@ function ProcessMIDI() {
     var nextBeat = durationFactory.nextBeatQuantized(timingInfo.blockStartBeat, pulse);
 
     while ((timingInfo.blockStartBeat <= nextBeat) && (nextBeat < timingInfo.blockEndBeat)) {
-        var thisBeatEnd = nextBeat + (pulse * (GetParameter(DURATION_PERC) / 100.0));
+        var thisBeatEnd = nextBeat + getRepeatedNoteDuration();
         // Put the note off event that exceeds the loop end beat and schedule it from the loop start
         if (timingInfo.cycling && (thisBeatEnd >= timingInfo.rightCycleBeat)) {
             thisBeatEnd = timingInfo.leftCycleBeat + (timingInfo.rightCycleBeat - Math.floor(timingInfo.rightCycleBeat));
