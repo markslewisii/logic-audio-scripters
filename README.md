@@ -45,6 +45,9 @@ This is the percentage of the current delay note velocity to be set for the next
 * 0 : Delay velocity will remain constant
 * \> 0: Delay will get louder
 
+## Monophony.js
+This script essentially convert a polyphonic patch to a monophonic one.  This effect allows only one note to play at a time.  The effect will track the order in which notes were played when holding multiple notes at once.  When you release the playing note it will then play the previous held note in the stack.
+
 ## Repeater.js
 This script will repeat the held notes at the pulse specified in the parameters.
 
