@@ -26,8 +26,10 @@ var noteDuration = {
             this._noteMap.set(midiEvent.pitch, midiEvent);
         }
         if (midiEvent instanceof NoteOff) {
-            if ((this._noteMap.get(midiEvent.pitch) !== null) && (this._noteMap.get(midiEvent.pitch) !== undefined)) {
+            var noteOnEvent = this._noteMap.get(midiEvent.pitch);
+            if ((this._noteMap.get(midiEvent.pitch) !== null) && (noteOnEvent !== undefined)) {
                 midiEvent.duration = midiEvent.beatPos - this._noteMap.get(midiEvent.pitch).beatPos;
+                midiEvent.noteOnEvent = noteOnEvent;
             }
             this._noteMap.delete(midiEvent.pitch);
         }
