@@ -1,4 +1,4 @@
-# logic-audio-scripters
+# Logic Audio Scripters
 Scripters for use in Logic Audio.  This repo contains common functions in the `/lib` folder which are compiled into .js files for use in the Logic Audio Scripter directory.  
 
 # How to build
