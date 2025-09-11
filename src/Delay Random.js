@@ -1,42 +1,19 @@
 
+// include ./lib/duration-factory.js
 // include ./lib/note-duration.js
+
 /**
- * Parameter name for number of delay repeats
+ * Parameter name for the pulse of the delay.
  * @type {string} 
  */
-const NUM_REPEATS = 'Number of delay repeats';
+const DELAY_PULSE = 'Pulse of delay';
+const DELAY_LENGTH_S = 'Length of delay';
+const DELAY_DENSITY = 'Density of delay';
+const DELAY_MIN_VELOCTIY = 'Minimum velocity of delay';
+const DELAY_MAX_VELOCTIY = 'Maximum velocity of delay';
+const TAPER_DELAY = 'Decay delay over time';
 
-/**
- * Parameter name for the delay acceleration rate.
- * Positive values slow down.
- * Negative values speed up.
- * 0 maintains rate
- * @type {string} 
- */
-const DELAY_ACCEL_RATE = 'Delay acceleration rate';
 
-/**
- * Parameter name for the velocity acceleration rate
- * Positive values increase volume.
- * Negative values decrease volume.
- * 0 maintains volume.
- * @type {string} 
- */
-const VELOCITY_ACCEL_RATE = 'Velocity acceleration rate';
-
-/**
- * Min length of a delay note in quarter notes.
- * Delay will not coninute if the note length less than this
- * @type {number} 
- */
-const MIN_DELAY = 15.0 / 240.0;
-
-/**
- * Max length of a delay note in quarter notes.
- * Delay will not coninute if the note length exceeds this
- * @type {number} 
- */
-const MAX_DELAY = 1.5;
 
 /**
  * Option to receiving timing info
@@ -48,7 +25,7 @@ var NeedsTimingInfo = true;
  * Option to receiving timing info
  * @type {boolean} 
  */
-var notesOffSent = false;
+var notesOffSent = true;
 
 /** 
  * Handle incoming event
@@ -60,51 +37,80 @@ function HandleMIDI(event) {
 
 	// Calculate the note duration in beats.  Begin execution of delayed notes.
 	if (event instanceof NoteOff) {
-		noteRepeater(event.pitch, event.beatPos)
+		var selectedPulseAsDuration = durationFactory.convertDurationToBeat(durationFactory.getDuration(GetParameter(DELAY_PULSE)));
+		delayPulse(
+			event, 
+			durationFactory.nextBeatQuantized(
+				event.beatPos + selectedPulseAsDuration, 
+				selectedPulseAsDuration
+			), 
+			selectedPulseAsDuration
+		);
 	}
 	event.send();
 }
 
 
-/** 
- * Note repeater.  
- * @param {number} pitch MIDI NoteOn pitch
- * @param {number} velocity MIDI NoteOn pitch
- * @param {number} startBeat Beat to start the delayed notes
- * @param {number} noteDuration Duration of the original note
- * @returns {void}
- */
-function noteRepeater(pitch, delayStart) {
-	var thisDuration = 0.0;
-	var thisVelocity = 64;
-	var thisStartBeat = delayStart;
+function delayPulse(ne, startBeat, pulse) {
+    var numRepeats = Math.ceil(GetParameter(DELAY_LENGTH_S) / (durationFactory.beatToMilliseconds(pulse) / 1000.0));
+    var thisBeat = startBeat;
+    var info = GetTimingInfo();
+    var diff = startBeat - info.blockStartBeat;
+    // Trace(info.beatPos);
+    for (let i = 0; i < numRepeats; i++) {
+        if (randomIntInRange(0, 100) <= GetParameter(DELAY_DENSITY)) {
 
-	for (i = 1; i <= GetParameter(NUM_REPEATS); i++) {
+			var thisVelocity = ne.noteOnEvent.velocity * randomIntInRange(GetParameter(DELAY_MIN_VELOCTIY), GetParameter(DELAY_MAX_VELOCTIY)) * 0.01;
+			//var thisVelocity = randomIntInRange(GetParameter(DELAY_MIN_VELOCTIY), GetParameter(DELAY_MAX_VELOCTIY));
+			if (GetParameter(TAPER_DELAY)) {
+				thisVelocity *= (1 - (i / numRepeats)); // taper the velocity
+			}
 
-		thisDuration = randomDuration();
-		thisVelocity = Math.floor(Math.random() * (80.0 - 40.0)) + 40.0;
+            var noteOnEvent = new NoteOn();
+            noteOnEvent.pitch = ne.noteOnEvent.pitch;
+			noteOnEvent.velocity = thisVelocity;
+            // noteOnEvent.sendAtBeat(thisBeat);
+            noteOnEvent.sendAfterMilliseconds(durationFactory.beatToMilliseconds(diff + (i * pulse)));
+            // noteOnEvent.sendAfterBeats(thisBeat);
 
-		// if (thisDuration < 1 / 240) break;
-		var noteOnEvent = new NoteOn;
-		noteOnEvent.pitch = pitch;
-		noteOnEvent.velocity = thisVelocity;
-		noteOnEvent.beatPos = thisStartBeat;
-
-		var noteOffEvent = new NoteOff;
-		noteOffEvent.pitch = pitch;
-		noteOffEvent.beatPos = thisStartBeat + thisDuration;
-
-		// next iteration
-		thisStartBeat += thisDuration + randomDuration();
-
-		noteOnEvent.send();
-		noteOffEvent.send();
-	}
+            var noteOffEvent = new NoteOff();
+            noteOffEvent.pitch = ne.noteOnEvent.pitch;
+			noteOffEvent.velocity = thisVelocity;
+            // noteOffEvent.sendAtBeat(thisBeat + pulse - 0.001); // subtract a small amount to avoid overlap issues
+            noteOffEvent.sendAfterMilliseconds(durationFactory.beatToMilliseconds((diff + (i+1) * pulse) - 0.001));
+        }
+        thisBeat += pulse;
+    }
 }
 
 
-function randomDuration() {
-	return Math.floor(Math.random() * (MAX_DELAY - MIN_DELAY)) + MIN_DELAY;
+function randomIntInRange(min, max) {
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
+/**
+ * Executed every time a parameter is changed
+ * @param {Number} param 
+ * @param {*} value 
+ */
+function ParameterChanged(param, value) {
+    switch (PluginParameters[param].name) {
+        case DELAY_MAX_VELOCTIY:
+            if (GetParameter(DELAY_MAX_VELOCTIY) < GetParameter(DELAY_MIN_VELOCTIY)) {
+                SetParameter(DELAY_MIN_VELOCTIY, GetParameter(DELAY_MAX_VELOCTIY));
+            }
+            break;
+        case DELAY_MIN_VELOCTIY:
+            if (GetParameter(DELAY_MIN_VELOCTIY) > GetParameter(DELAY_MAX_VELOCTIY)) {
+                SetParameter(DELAY_MAX_VELOCTIY, GetParameter(DELAY_MIN_VELOCTIY));
+            }
+            break;
+
+        default:
+        //no action
+    }
+
 }
 
 /** 
@@ -118,7 +124,6 @@ function ProcessMIDI() {
 
 	//if the transport stops, and allNotesOff() has not yet been sent
 	if (!info.playing && !notesOffSent) {
-		Trace('ALL NOTES OFF!!!!');
 		MIDI.allNotesOff();
 		noteDuration.clear();
 		notesOffSent = true;
@@ -132,40 +137,50 @@ function ProcessMIDI() {
 
 var PluginParameters =
 	[
+		durationFactory.generateDurationMenu(DELAY_PULSE),
+
 		{
-			name: 'start length',
-			type: 'lin',
-			minValue: 4 * 1.0/64.0,
-			maxValue: 4 * 1.0/2.0,
-			numberOfSteps: 15,
-			defaultValue: 1
-		},
-		{
-			name: NUM_REPEATS,
+			name: DELAY_LENGTH_S,
 			type: 'lin',
 			minValue: 1,
 			maxValue: 30,
-			numberOfSteps: 29,
-			defaultValue: 10
+			numberOfSteps: 30-1,
+			defaultValue: 5,
+			unit: 'seconds'
 		},
 		{
-			name: DELAY_ACCEL_RATE,
+			name: DELAY_DENSITY,
 			type: 'lin',
-			minValue: -50,
-			maxValue: 50,
-			numberOfSteps: 100,
-			defaultValue: 33,
+			minValue: 1,
+			maxValue: 100,
+			numberOfSteps: 100-1,
+			defaultValue: 75,
 			unit: '%'
 		},
 		{
-			name: VELOCITY_ACCEL_RATE,
+			name: DELAY_MIN_VELOCTIY,
 			type: 'lin',
-			minValue: -50,
-			maxValue: 50,
-			numberOfSteps: 100,
-			defaultValue: 33,
+			minValue: 1,
+			maxValue: 100,
+			numberOfSteps: 100-1,
+			defaultValue: 30,
 			unit: '%'
+		},
+		{
+			name: DELAY_MAX_VELOCTIY,
+			type: 'lin',
+			minValue: 1,
+			maxValue: 100,
+			numberOfSteps: 100-1,
+			defaultValue: 60,
+			unit: '%'
+		},
+		{
+			name: TAPER_DELAY,
+			type:"checkbox",
+        	defaultValue: 0
 		}
+
 
 	];
 

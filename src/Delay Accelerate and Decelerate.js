@@ -35,14 +35,14 @@ const VELOCITY_ACCEL_RATE = 'Velocity acceleration rate';
 
 /**
  * Min length of a delay note in quarter notes.
- * Delay will not coninute if the note length less than this
+ * Delay will not continue if the note length less than this
  * @type {number} 
  */
 const MIN_DELAY = 1.0 / 240.0;
 
 /**
  * Max length of a delay note in quarter notes.
- * Delay will not coninute if the note length exceeds this
+ * Delay will not continue if the note length exceeds this
  * @type {number} 
  */
 const MAX_DELAY = 8.0;
@@ -78,9 +78,8 @@ function HandleMIDI(event) {
         var noteDur = (GetParameter(DUR_START) > 0) ? 
 			durationFactory.convertDurationToBeat(durationFactory.getDuration(GetParameter(DUR_START))) :
 			event.duration;
-		Trace(noteDur);
 		noteRepeater(event.pitch,
-			prevNoteOn.velocity,
+			event.noteOnEvent.velocity,
 			event.beatPos + noteDur,
 			noteDur
 		)
@@ -106,11 +105,11 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
 
 		// safeguards
 		if ((thisDuration > MAX_DELAY) && (GetParameter(DELAY_ACCEL_RATE) > 0)) {
-			Trace('ABORT');
+			// Trace('ABORT');
 			return;
 		}
 		if ((thisDuration < MIN_DELAY) && (GetParameter(DELAY_ACCEL_RATE) < 0)) {
-			Trace('ABORT');
+			// Trace('ABORT');
 			return;
 		}
 
@@ -122,6 +121,8 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
 			thisVelocity = 1;
 		}
 
+		Trace('startBeat: ' + thisStartBeat + 'velocity: ' + thisVelocity + ' duration: ' + thisDuration);
+
 		// if (thisDuration < 1 / 240) break;
 		var noteOnEvent = new NoteOn;
 		noteOnEvent.pitch = pitch;
@@ -132,11 +133,10 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
 		noteOffEvent.pitch = pitch;
 		noteOffEvent.beatPos = thisStartBeat + thisDuration;
 
-		// next iteration
+		// values for next iteration
 		thisStartBeat = noteOffEvent.beatPos + Math.abs(thisDuration);
 		thisDuration += thisDuration * (GetParameter(DELAY_ACCEL_RATE) / 100.0);
 		thisVelocity += thisVelocity * (GetParameter(VELOCITY_ACCEL_RATE) / 100.0);
-
 
 		noteOnEvent.send();
 		noteOffEvent.send();
@@ -155,7 +155,6 @@ function ProcessMIDI() {
 
 	//if the transport stops, and allNotesOff() has not yet been sent
 	if (!info.playing && !notesOffSent) {
-		Trace('ALL NOTES OFF!!!!');
 		MIDI.allNotesOff();
 		noteDuration.clear();
 		notesOffSent = true;
@@ -166,7 +165,6 @@ function ProcessMIDI() {
 		notesOffSent = false;
 	}
 }
-
 
 durationFactory.durationList.unshift('off');
 

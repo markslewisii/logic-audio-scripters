@@ -52,6 +52,14 @@ var noteDuration = {
         }
     },
     /**
+     * Is note playing?
+     * @param {number} intNote 
+     * @returns 
+     */
+    isPlaying: function(intNote) {
+        return this._noteMap.has(intNote);
+    },
+    /**
      * Clear the map of active notes.
      * @returns {null}
      */
@@ -59,6 +67,11 @@ var noteDuration = {
         this._noteMap.clear();
     }
 }
+/**
+ * Option to receiving timing info
+ * @type {boolean} 
+ */
+var NeedsTimingInfo = true;
 /**
  * Static object to translate note durations to beat values.
  * In Logic Audio, a 1/4 note = 1 beat.
@@ -144,6 +157,26 @@ var durationFactory = {
             valueStrings: this.durationList,
             defaultValue: 0
         };
+    },
+    /**
+     * Convert a beat value to milliseconds based on the current tempo
+     * @param {Number} beat 
+     * @returns 
+     */
+    beatToMilliseconds: function(beat) {
+        var timingInfo = GetTimingInfo();
+        // Convert beat to milliseconds based on the BPM
+        return (beat * 60 * 1000) / timingInfo.tempo;
+    },
+    /**
+     * Convert milliseconds to beat value based on the current tempo
+     * @param {Number} milliseconds 
+     * @returns 
+     */
+    millisecondsToBeat: function(milliseconds) {
+        var timingInfo = GetTimingInfo();
+        // Convert milliseconds to beat based on the BPM
+        return (milliseconds * timingInfo.tempo) / (60 * 1000);
     }
 }
 /**
@@ -174,13 +207,13 @@ const DELAY_ACCEL_RATE = 'Delay acceleration rate';
 const VELOCITY_ACCEL_RATE = 'Velocity acceleration rate';
 /**
  * Min length of a delay note in quarter notes.
- * Delay will not coninute if the note length less than this
+ * Delay will not continue if the note length less than this
  * @type {number} 
  */
 const MIN_DELAY = 1.0 / 240.0;
 /**
  * Max length of a delay note in quarter notes.
- * Delay will not coninute if the note length exceeds this
+ * Delay will not continue if the note length exceeds this
  * @type {number} 
  */
 const MAX_DELAY = 8.0;
@@ -208,8 +241,7 @@ function HandleMIDI(event) {
     // Calculate the note duration in beats.  Begin execution of delayed notes.
     if (event instanceof NoteOff) {
         var noteDur = (GetParameter(DUR_START) > 0) ? durationFactory.convertDurationToBeat(durationFactory.getDuration(GetParameter(DUR_START))) : event.duration;
-        Trace(noteDur);
-        noteRepeater(event.pitch, prevNoteOn.velocity, event.beatPos + noteDur, noteDur)
+        noteRepeater(event.pitch, event.noteOnEvent.velocity, event.beatPos + noteDur, noteDur)
     }
     event.send();
 }
@@ -228,11 +260,11 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
     for (i = 1; i <= GetParameter(NUM_REPEATS); i++) {
         // safeguards
         if ((thisDuration > MAX_DELAY) && (GetParameter(DELAY_ACCEL_RATE) > 0)) {
-            Trace('ABORT');
+            // Trace('ABORT');
             return;
         }
         if ((thisDuration < MIN_DELAY) && (GetParameter(DELAY_ACCEL_RATE) < 0)) {
-            Trace('ABORT');
+            // Trace('ABORT');
             return;
         }
         if (thisVelocity > 127) {
@@ -241,6 +273,7 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
         if (thisVelocity < 1) {
             thisVelocity = 1;
         }
+        Trace('startBeat: ' + thisStartBeat + 'velocity: ' + thisVelocity + ' duration: ' + thisDuration);
         // if (thisDuration < 1 / 240) break;
         var noteOnEvent = new NoteOn;
         noteOnEvent.pitch = pitch;
@@ -249,7 +282,7 @@ function noteRepeater(pitch, velocity, startBeat, noteDuration) {
         var noteOffEvent = new NoteOff;
         noteOffEvent.pitch = pitch;
         noteOffEvent.beatPos = thisStartBeat + thisDuration;
-        // next iteration
+        // values for next iteration
         thisStartBeat = noteOffEvent.beatPos + Math.abs(thisDuration);
         thisDuration += thisDuration * (GetParameter(DELAY_ACCEL_RATE) / 100.0);
         thisVelocity += thisVelocity * (GetParameter(VELOCITY_ACCEL_RATE) / 100.0);
@@ -266,7 +299,6 @@ function ProcessMIDI() {
     var info = GetTimingInfo();
     //if the transport stops, and allNotesOff() has not yet been sent
     if (!info.playing && !notesOffSent) {
-        Trace('ALL NOTES OFF!!!!');
         MIDI.allNotesOff();
         noteDuration.clear();
         notesOffSent = true;
