@@ -6,6 +6,11 @@
  * @see {@link https://github.com/markslewisii/logic-audio-scripters}
  */
 /**
+ * Option to receiving timing info
+ * @type {boolean} 
+ */
+var NeedsTimingInfo = true;
+/**
  * Static object to translate note durations to beat values.
  * In Logic Audio, a 1/4 note = 1 beat.
  * @type {Object}
@@ -90,6 +95,26 @@ var durationFactory = {
             valueStrings: this.durationList,
             defaultValue: 0
         };
+    },
+    /**
+     * Convert a beat value to milliseconds based on the current tempo
+     * @param {Number} beat 
+     * @returns 
+     */
+    beatToMilliseconds: function(beat) {
+        var timingInfo = GetTimingInfo();
+        // Convert beat to milliseconds based on the BPM
+        return (beat * 60 * 1000) / timingInfo.tempo;
+    },
+    /**
+     * Convert milliseconds to beat value based on the current tempo
+     * @param {Number} milliseconds 
+     * @returns 
+     */
+    millisecondsToBeat: function(milliseconds) {
+        var timingInfo = GetTimingInfo();
+        // Convert milliseconds to beat based on the BPM
+        return (milliseconds * timingInfo.tempo) / (60 * 1000);
     }
 }
 /**
@@ -146,6 +171,14 @@ var noteDuration = {
         }
     },
     /**
+     * Is note playing?
+     * @param {number} intNote 
+     * @returns 
+     */
+    isPlaying: function(intNote) {
+        return this._noteMap.has(intNote);
+    },
+    /**
      * Clear the map of active notes.
      * @returns {null}
      */
@@ -162,7 +195,12 @@ const PULSE_DUR = 'Pulse duration';
  * Parameter name duration percentage
  * @type {string} 
  */
-const DURATION_PERC = 'Duration percentage'
+const DURATION_PERC = 'Duration percentage';
+/**
+ * Parameter name velocity percentage
+ * @type {string} 
+ */
+const VELOCITY_PERC = 'Velocity percentage';
 /**
  * Previous beat of the last block.  Use to sense when the transport goes back in time.
  * @type {number}
@@ -281,7 +319,13 @@ function ProcessMIDI() {
             thisBeatEnd = timingInfo.leftCycleBeat + (timingInfo.rightCycleBeat - Math.floor(timingInfo.rightCycleBeat));
         }
         noteDuration.getActiveNotes().forEach((activeNote) => {
-            createNote(activeNote.pitch, activeNote.velocity, nextBeat, thisBeatEnd);
+            var vel = activeNote.velocity;
+            if (activeNote.repeated == true) {
+                vel *= (GetParameter(VELOCITY_PERC) / 100.0);
+            } else {
+                activeNote.repeated = true;
+            }
+            createNote(activeNote.pitch, vel, nextBeat, thisBeatEnd);
         });
         pulse = getPulse();
         nextBeat = durationFactory.nextBeatQuantized(nextBeat + pulse, pulse);
@@ -311,6 +355,18 @@ var PluginParameters = [{
         maxValue: 99,
         numberOfSteps: 98,
         defaultValue: 50,
+        unit: '%'
+    },
+    /* 
+    Parameter: velocity percentage.  Choose how loud the repeated notes should be as a percentage of the original note velocity.
+    */
+    {
+        name: VELOCITY_PERC,
+        type: 'lin',
+        minValue: 1,
+        maxValue: 100,
+        numberOfSteps: 99,
+        defaultValue: 100,
         unit: '%'
     }
 ];

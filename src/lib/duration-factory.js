@@ -1,10 +1,15 @@
 /**
+ * Option to receiving timing info
+ * @type {boolean} 
+ */
+var NeedsTimingInfo = true;
+
+/**
  * Static object to translate note durations to beat values.
  * In Logic Audio, a 1/4 note = 1 beat.
  * @type {Object}
  */
-var durationFactory = {
-    
+var durationFactory = {    
     /**
      * List of note durations.  Used to generate a parameter menu.
      * T = triplet
@@ -91,5 +96,30 @@ var durationFactory = {
             valueStrings: this.durationList,
             defaultValue: 0
         };
+    },
+
+    /**
+     * Convert a beat value to milliseconds based on the current tempo
+     * @param {Number} beat 
+     * @returns 
+     */
+    beatToMilliseconds: function (beat) {
+        var timingInfo = GetTimingInfo();
+
+        // Convert beat to milliseconds based on the BPM
+        return (beat * 60 * 1000) / timingInfo.tempo;
+    },
+
+
+    /**
+     * Convert milliseconds to beat value based on the current tempo
+     * @param {Number} milliseconds 
+     * @returns 
+     */
+    millisecondsToBeat: function (milliseconds) {
+        var timingInfo = GetTimingInfo();
+
+        // Convert milliseconds to beat based on the BPM
+        return (milliseconds * timingInfo.tempo) / (60 * 1000);
     }
 }

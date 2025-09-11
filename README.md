@@ -23,6 +23,40 @@ npm run build
 Unfortunately you can't simply drop these files into a directory for Logic Audio to read.  You'll have to open the file in the `/dist` you want to import into Logic Audio, open the Scripter MIDI FX in Logic Audio, click the `Open Script in Editor` button, copy/paste the contents of the .js file into the editor, click the `Run Script` button, and choose `Save As...` from the Scripter window to save the file. The file should be saved as a `.pst` file in `~/Music/Audio Music Apps/Plug-In Settings/Scripter`.
 
 # Scripts
+
+## Compressor Limiter.js
+
+This script will adjust velocities if they fall below a minimum threshold or exceed a maximum threshold.
+
+### parameters
+
+#### Limiter threshold
+
+The threshold at which to start limiting velocities.
+
+#### Limiter ratio
+
+This is the ratio to apply the amount of limiting. The range is 
+
+* 1:1 no limiting applied
+* 1:∞ maximum amount of limiting (hard knee).  All velocities above the limiter threshold are set to the threshold value.
+
+#### Gain threshold
+
+The threshold at which to start applying gain to velocities.
+
+#### Gain ratio
+
+This is the ratio to apply the amount of gain. The range is 
+
+* 1:1 no gain applied
+* 1:∞ maximum amount of gain.  All velocities below the gain threshold are set to the threshold value.
+
+#### Normalize
+
+This setting will adjust all velocities so the cover the full range of values akin to normalizing digital audio.
+
+
 ## Delay Accelerate and Decelerate.js
 This script is a note delay which will accelerate or decelerate and shorten or length the ndelayed notes respectively.  Note velocity can also increase or decrease. 
 

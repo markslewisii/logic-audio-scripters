@@ -19,7 +19,13 @@ const PULSE_DUR = 'Pulse duration';
  * Parameter name duration percentage
  * @type {string} 
  */
-const DURATION_PERC = 'Duration percentage'
+const DURATION_PERC = 'Duration percentage';
+
+/**
+ * Parameter name velocity percentage
+ * @type {string} 
+ */
+const VELOCITY_PERC = 'Velocity percentage';
 
 /**
  * Previous beat of the last block.  Use to sense when the transport goes back in time.
@@ -47,6 +53,7 @@ var modWheelValuePower = 0.9
  * @type {boolean}
  */
 var needReset = false;
+
 /**
  * Percentage to adjust the pulse from the modulation wheel value.
  * @type {number}
@@ -155,7 +162,14 @@ function ProcessMIDI() {
             thisBeatEnd = timingInfo.leftCycleBeat + (timingInfo.rightCycleBeat - Math.floor(timingInfo.rightCycleBeat));
         }
         noteDuration.getActiveNotes().forEach((activeNote) => {
-            createNote(activeNote.pitch, activeNote.velocity, nextBeat, thisBeatEnd);
+            var vel = activeNote.velocity;
+            if (activeNote.repeated == true) {
+                vel *= (GetParameter(VELOCITY_PERC) / 100.0);
+            } else {
+                activeNote.repeated = true;
+            }
+
+            createNote(activeNote.pitch, vel, nextBeat, thisBeatEnd);
         });
         pulse = getPulse();
         nextBeat = durationFactory.nextBeatQuantized(nextBeat + pulse, pulse);
@@ -193,6 +207,21 @@ var PluginParameters = [
         numberOfSteps: 98,
         defaultValue: 50,
         unit: '%'
+    },
+
+    /* 
+    Parameter: velocity percentage.  Choose how loud the repeated notes should be as a percentage of the original note velocity.
+    */
+    {
+        name: VELOCITY_PERC,
+        type: 'lin',
+        minValue: 1,
+        maxValue: 100,
+        numberOfSteps: 99,
+        defaultValue: 100,
+        unit: '%'
     }
+
+    
 
 ];

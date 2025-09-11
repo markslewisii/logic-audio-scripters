@@ -57,6 +57,15 @@ var noteDuration = {
     },
 
     /**
+     * Is note playing?
+     * @param {number} intNote 
+     * @returns 
+     */
+    isPlaying: function (intNote) {
+        return this._noteMap.has(intNote);
+    },
+
+    /**
      * Clear the map of active notes.
      * @returns {null}
      */
